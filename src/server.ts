@@ -1,16 +1,20 @@
 import express, { type Application, type Request, type Response } from 'express';
 
 import {Pool} from 'pg';
+import config from './config';
 
 const app:Application = express();// Create a new Express application
-const port = 5000;
+const port = config.port; // Use the port from config or default to 5000
 
 app.use(express.json()); // Middleware to parse JSON request bodies
 app.use(express.text()); // Middleware to parse text request bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded request bodies
 
 
-const pool = new Pool({connectionString:"postgresql://neondb_owner:npg_U6lGfFRZzN2X@ep-wild-truth-aqopo8wc-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"})
+const pool = new Pool({
+  connectionString: config.connectionString,
+port: process.env.PORT,
+});
 
 // Initialize the database and create the users table if it doesn't exist
 const initDB = async () => {
@@ -128,12 +132,77 @@ app.put("/api/users/:id", async(req:Request, res:Response)=>{
 
   // console.log("ID",id);
   // console.log(name,password,age,is_active);
-  const result =await pool.query(`
-    UPDATE users SET name=$1,password=$2,age=$3,is_active=$4
-    WHERE id=$5
+  try {
+    const result =await pool.query(`
+    UPDATE users SET 
+    name=COALESCE($1,name),
+    password=COALESCE($2,password),
+    age=COALESCE($3,age),
+    is_active=COALESCE($4,is_active)
+    WHERE id=$5 RETURNING *
     `,[name,password,age,is_active,id]);
-  console.log(result);
+  // console.log(result);
+
+  if(result.rows.length===0){
+    res.status(404).json({
+      success:false,
+      message:"User not found",
+    })
+  }
+
+  res.status(200).json({
+    success:true,
+    message:"User updated successfully",
+    data:result.rows[0],
+  })
+  } catch (error:any) {
+    res.status(500).json({
+      success:false,
+      message:"Error updating user",
+      error:error,
+    })
+  }
+
 })
+
+
+//DELETE request to delete user by id
+app.delete("/api/users/:id", async (req: Request, res: Response) => {
+
+  const { id } = req.params;
+
+  try {
+
+    const result = await pool.query(
+      `DELETE FROM users WHERE id=$1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      data: {},
+    });
+
+  } catch (error: any) {
+
+    return res.status(500).json({
+      success: false,
+      message: "Error deleting user",
+      error: error.message,
+    });
+
+  }
+
+});
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
