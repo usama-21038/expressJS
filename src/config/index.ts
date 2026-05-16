@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 import { connect } from 'http2';
 import path from 'path';
 // Load environment variables from .env file  (config() er maddome path join kora)
@@ -10,6 +10,7 @@ dotenv.config({
 
 const config = {
     connectionString: process.env.CONNECTIONSTRING as string,
+    port: process.env.PORT,
 };
 
 export default config;

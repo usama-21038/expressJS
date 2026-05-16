@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-enco
 
 const pool = new Pool({
   connectionString: config.connectionString,
-port: process.env.PORT,
+// port: process.env.PORT,
 });
 
 // Initialize the database and create the users table if it doesn't exist
@@ -94,6 +94,8 @@ app.get("/api/users", async(req: Request, res: Response) => {
     })
   }
 })
+
+
 //for get user by id
   app.get("/api/users/:id", async(req:Request, res:Response)=>{
     const {id}=req.params;
